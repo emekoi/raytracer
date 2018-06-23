@@ -35,4 +35,4 @@ proc intersect*(s: Sphere, r: Ray, t: var float): bool =
     return true
 
 proc normal*(s: Sphere, point: Vec3): Vec3 =
-  (s.center - point) / s.radius
+  (point - s.center) / s.radius
