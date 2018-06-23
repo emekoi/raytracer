@@ -11,6 +11,7 @@ type
     S.center is Vec3
     S.color is Color
     S.intersect(Ray, var float) is bool
+    S.normal(Vec3) is Vec3
 
   Sphere* = tuple
     center: Vec3
@@ -32,3 +33,6 @@ proc intersect*(s: Sphere, r: Ray, t: var float): bool =
       t1 = -b + disc
     t = t0.min(t1)
     return true
+
+proc normal*(s: Sphere, point: Vec3): Vec3 =
+  (s.center - point) / s.radius
