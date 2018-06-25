@@ -4,7 +4,7 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import sdl2/sdl, buffer, color
+import sdl2/sdl, suffer, pixel
 
 type
   EventType* = enum
@@ -95,7 +95,7 @@ proc init*(conf: Config): App =
   sdl.logInfo sdl.LogCategoryApplication, "SDL initialized successfully"
   result.screen = result.window.getWindowSurface
   result.canvas = newBuffer(conf.width, conf.height)
-  result.canvas_size = conf.width * conf.height * sizeof(color.Color)
+  result.canvas_size = conf.width * conf.height * sizeof(Pixel)
   result.close = false
   result.config = conf
 
@@ -117,7 +117,7 @@ proc run*(app: App, updateProc: proc(), drawProc: proc(canvas: Buffer)) =
   var last = 0.0
   while not app.close:
     updateProc()
-    app.canvas.clear(color(0x00'u8, 0x00'u8, 0x00'u8, 0xff'u8))
+    app.canvas.clear(color(0x00, 0x00, 0x00))
     app.draw(drawProc)
     let step = 1.0 / app.config.max_fps
     let now = sdl.getTicks().float / 1000.0

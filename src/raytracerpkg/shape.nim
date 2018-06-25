@@ -4,19 +4,19 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import math, vec3, ray, color
+import math, suffer, vec3, ray, pixel
 
 type
   Shape* = concept S
     S.center is Vec3
-    S.color is Color
+    S.color is Pixel
     S.intersect(Ray, var float) is bool
     S.normal(Vec3) is Vec3
 
   Sphere* = tuple
     center: Vec3
     radius: float
-    color: Color
+    color: Pixel
 
 proc intersect*(s: Sphere, r: Ray, t: var float): bool =
   let

@@ -4,11 +4,11 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import streams, random
+import streams, random, math, suffer
 
 import raytracerpkg/[
   vec3, ray, app, scene,
-  shape, color, light, buffer
+  shape, pixel, light
 ]
 
 const
@@ -22,8 +22,9 @@ const
 
 # create a new scene
 var mainScene = newScene[Sphere](WIDTH, HEIGHT)
-mainScene.add ((WIDTH / 2, HEIGHT / 2, 50.0), 50.0, BLUE).Sphere
+mainScene.add ((WIDTH / 2, HEIGHT / 2, 50.0), 50.0, RED).Sphere
 mainScene.add ((WIDTH / 2, 0.0, 50.0), WHITE).Light
+# mainScene.add ((WIDTH / 2, (HEIGHT / 2) + 50.0, 50.0), WHITE).Light
 
 let mainApp = conf.init()
 
@@ -31,6 +32,8 @@ proc update() =
   discard mainApp.poll()
 
 proc draw(buf: Buffer) =
+  buf.setBlend(BlendMode.BLEND_MULTIPLY)
+
   for y in 0..<HEIGHT:
     for x in 0..<WIDTH:
       let x = float(x)
@@ -47,17 +50,15 @@ proc draw(buf: Buffer) =
           let point = ray.origin + ray.direction * t
 
           # color the pixel
-          buf.setPixel(x.int, y.int, o.color)
+          buf.setPixel(o.color, x.int, y.int)
 
           # apply lighting
-          # for l in mainScene.lights:
-          #   let
-          #     light = l.position - point
-          #     normal = o.normal(point)
-          #     dt = light.norm() ^ normal.norm()
-          #     pixel = buf.getPixel(x.int, y.int)
-          #
-          #   buf.setPixel(x.int, y.int, pixel * (l.color * dt))
+          for l in mainScene.lights.mitems:
+            let
+              light = l.position - point
+              dt = light.norm() ^ o.normal(point).norm()
+            buf.drawPixel(l.color * dt, x.int, y.int)
+
 
 # run the raytracer
 mainApp.run(update, draw)

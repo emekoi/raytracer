@@ -4,7 +4,7 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import streams, shape, color, light
+import streams, shape, light
 
 type Scene*[T: Shape] = object
   objects*: seq[T]
