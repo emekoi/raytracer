@@ -17,14 +17,16 @@ type Scene* = object
   lights*: seq[Light]
   width, height: int
   pixels: seq[Color]
+  shadowBias: float
   fov: float
 
-proc newScene*(width, height: int, fov: float=90.0): Scene =
+proc newScene*(width, height: int, fov: float=90.0, shadowBias: float=1e-3): Scene =
   result.pixels = newSeq[Color](width * height)
   result.objects = @[]
   result.lights = @[]
   result.width = width
   result.height = height
+  result.shadowBias = shadowBias
   result.fov = fov
   
 proc setPixel*(self: var Scene, x, y: int, color: Color) =
@@ -71,11 +73,15 @@ proc getColor(self: var Scene, ray: Ray, intersection: Intersection): Color =
   for light in self.lights:
     let
       directionToLight = -light.direction.norm()
-      lightPower = (surfaceNormal ^ directionToLight).max(0.0) * light.intensity
+      shadowRay = (hitPoint + (surfaceNormal * self.shadowBias),
+        directionToLight).Ray
+      inLight = self.trace(shadowRay).isNone()
+      lightIntensity = if inLight: light.intensity else: 0.0
+      lightPower = (surfaceNormal ^ directionToLight).max(0.0) * lightIntensity
     result += intersection.shape.color * light.color * lightPower * lightReflected
+
     if intersection.shape of Plane:
-      if lightReflected < 0.05:
-        echo "hit plane: ", lightReflected
+      # echo (surfaceNormal)
       discard
     else:
       # echo "hit sphrere: ", intersection.shape.albedo

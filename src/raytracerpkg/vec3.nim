@@ -59,6 +59,9 @@ proc `/=`*(self: var Vec3, rhs: float)=
 
 proc `-`*(self: Vec3): Vec3 =
   (-self.x, -self.y, -self.z)
+  # result.x = if self.x != 0.0: -self.x else: 0.0
+  # result.y = if self.y != 0.0: -self.y else: 0.0
+  # result.z = if self.z != 0.0: -self.z else: 0.0
 
 proc `^`*(self, rhs: Vec3): float =
   result += (self.x * rhs.x)
