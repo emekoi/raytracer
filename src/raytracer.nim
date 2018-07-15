@@ -25,7 +25,7 @@ proc main(filename: string) =
   scene.add newSphere((1.0, 0.0, -3.0), (1.0, 1.0, 0.9), 0.18, 1.0)
   scene.add newSphere((-1.0, -1.0, -2.0), (0.0, 1.0, 0.5), 0.18, 1.0)
   
-  scene.add newLight((0.0, 0.0, 0.0), WHITE, 100.0)
+  scene.add newLight((0.0, 0.0, -1.0), WHITE, 10.0)
 
   # render the scene to disk
   scene.render(filename)
