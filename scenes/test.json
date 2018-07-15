@@ -1,5 +1,6 @@
 {  
-  "objects":[  
+  "objects":[
+    {
       "sphere": {  
         "origin":{  
           "Field0":0.0,
@@ -13,9 +14,11 @@
         },
         "albedo":0.18
       }
+    }
   ],
-  "lights":[  
-      {  
+  "lights":[
+    {
+      "directional" :{  
         "direction":{  
           "Field0":0.0,
           "Field1":0.0,
@@ -28,6 +31,8 @@
         },
         "intensity":10.0
       }
+    }
+      
   ],
   "width":800,
   "height":600,
