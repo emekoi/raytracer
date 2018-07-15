@@ -11,5 +11,4 @@ bin           = @["raytracer"]
 # Dependencies
 
 requires "nim >= 0.18.0"
-requires "suffer >= 0.1.2"
-requires "sdl2_nim >= 2.0.7.0"
+requires "nimPNG >= 0.2.2"

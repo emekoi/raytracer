@@ -4,35 +4,75 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import math, suffer, vec3, ray, pixel
+import math, options
+import vec3, ray, color
 
 type
-  Shape* = concept S
-    S.center is Vec3
-    S.color is Pixel
-    S.intersect(Ray, var float) is bool
-    S.normal(Vec3) is Vec3
+  Shape* = ref object of RootObj
+    origin*: Vec3
+    color*: Color
 
-  Sphere* = tuple
-    center: Vec3
+  Intersection* = object
+    distance*: float
+    shape*: Shape
+
+  Sphere* = ref object of Shape
     radius: float
-    color: Pixel
+  
+  Plane* = ref object of Shape
+    normal: Vec3
 
-proc intersect*(s: Sphere, r: Ray, t: var float): bool =
+proc newSphere*(origin: Vec3, color: Color, radius: float): Sphere =
+  new result
+  result.origin = origin
+  result.color = color
+  result.radius = radius
+  
+proc newPlane*(origin: Vec3, color: Color, normal: Vec3): Plane =
+  new result
+  result.origin = origin
+  result.color = color
+  result.normal = normal
+
+method intersect*(self: Shape, ray: Ray): Option[float] {.base.} =
+  raise newException(Exception, "implement intersect")
+
+method normal*(self: Shape, point: Vec3): Vec3 {.base.} =
+  raise newException(Exception, "implement normal")
+
+method intersect*(self: Sphere, ray: Ray): Option[float] =
   let
-    oc = r.origin - s.center
-    b = 2 * (oc ^ r.direction)
-    c = (oc ^ oc) - (s.radius ^ 2)
-    disc = b * b - 4 * c;
-  if disc < 0:
-    return false
-  else:
-    let
-      disc = disc.sqrt()
-      t0 = -b - disc
-      t1 = -b + disc
-    t = t0.min(t1)
-    return true
+    l = self.origin - ray.origin
+    adj = l ^ ray.direction
+    d2 = (l ^ l) - (adj ^ 2)
+    r2 = self.radius ^ 2
+  
+  if d2 > r2:
+    return none(float)
 
-proc normal*(s: Sphere, point: Vec3): Vec3 =
-  (point - s.center) / s.radius
+  let
+    thc = (r2 - d2).sqrt()
+    t0 = adj - thc
+    t1 = adj + thc
+  
+  if t0 < 0.0 and t1 < 0.0:
+    return none(float)
+
+  some(t0.min(t1))
+
+# method normal*(self: Sphere, point: Vec3): Vec3 =
+#   (point - self.origin) / self.radius
+
+method intersect*(self: Plane, ray: Ray): Option[float] =
+  let denom = self.normal ^ ray.direction
+  # echo denom
+  if denom > 1e-6:
+    let
+      v = self.origin - ray.origin
+      dist = (v ^ self.normal) / denom
+    echo (v ^ self.normal)
+    if dist >= 0.0:
+      if dist != 0.0:
+        echo "zero"
+      return some(dist)
+  none(float)

@@ -4,8 +4,8 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import vec3, suffer
+import vec3, color
 
 type Light* = tuple
   position: Vec3
-  color: Pixel
+  color: Color

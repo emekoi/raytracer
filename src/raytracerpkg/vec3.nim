@@ -58,7 +58,9 @@ proc `/=`*(self: var Vec3, rhs: float)=
   self = (self.x / rhs, self.y / rhs, self.z / rhs)
 
 proc `^`*(self, rhs: Vec3): float =
-  self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+  result += (self.x * rhs.x)
+  result += (self.y * rhs.y)
+  result += (self.z * rhs.z)
 
 proc mag*(self: Vec3): float =
   result = ((self.x ^ 2) + (self.y ^ 2) + (self.z ^ 2)).sqrt()
@@ -67,3 +69,6 @@ proc norm*(self: Vec3): Vec3 =
   let m = self.mag()
   if m > 0: return self / m
   else: return self
+
+proc zero*(): Vec3 =
+  (0.0, 0.0, 0.0)
