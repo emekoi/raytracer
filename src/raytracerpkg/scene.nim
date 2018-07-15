@@ -5,7 +5,7 @@
 #
 
 
-import streams, options, future
+import streams, math, options, future
 import nimPNG
 import shape, light, ray, vec3, color
 
@@ -49,12 +49,10 @@ proc trace(self: Scene, ray: Ray): Option[Intersection] =
   for obj in self.objects:
     obj.intersect(ray).map proc(d: float) =
       intersections.add Intersection(distance: d, shape: obj)
-      # if obj of Plane: echo d
 
   if intersections.len >= 1:
     var least = intersections[0]
     for i in intersections:
-      # echo least
       if i.distance < least.distance:
         least = i
         
@@ -69,11 +67,25 @@ proc render*(self: var Scene, output: string) =
     for x in 0 ..< self.width:    
       let
         ray = prime(x, y, self.width, self.height, self.fov)
-        obj = self.trace(ray)
+        intersection = self.trace(ray)
       
-      if obj.isSome():
-        let i = obj.get()
-        self.setPixel(x, y, i.shape.color)
+      if intersection.isSome():
+        let
+          intersection = intersection.get()
+          hitPoint = ray.origin + (ray.direction * intersection.distance)
+          surfaceNormal = intersection.shape.surfaceNormal(hitPoint)
+        for light in self.lights:
+          let
+            directionToLight = -light.direction
+            lightPower = (surfaceNormal ^ directionToLight) * light.intensity
+            lightReflected = intersection.shape.albedo / PI
+            color = intersection.shape.color * light.color * lightPower * lightReflected
+          
+          self.setPixel(x, y, color)
+
+
+
+        # self.setPixel(x, y, i.shape.color)
       
       # for obj in self.objects:
         # let i = obj

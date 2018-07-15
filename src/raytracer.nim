@@ -18,12 +18,14 @@ const
 proc main(filename: string) =
   # create a new scene
   var scene = newScene(WIDTH, HEIGHT)
-  scene.add newPlane((0.0, 0.0, -10.0), (0.678, 0.847, 0.901), (0.0, 1.0, 0.0))
-  scene.add newPlane((0.0, 0.0, -10.0), (0.901, 0.847, 0.678), (0.0, -1.0, 0.0))
+  scene.add newPlane((0.0, 1.0, -10.0), (0.678, 0.847, 0.901), 0.18, (0.0, 1.0, 0.0))
+  scene.add newPlane((0.0, -1.0, -10.0), (0.901, 0.847, 0.678), 0.18, (0.0, -1.0, 0.0))
   
-  scene.add newSphere((0.0, 0.0, -2.0), (0.4, 1.0, 0.4), 1.0)
-  scene.add newSphere((1.0, 0.0, -3.0), (1.0, 1.0, 0.9), 1.0)
-  scene.add newSphere((-1.0, -1.0, -2.0), (0.0, 1.0, 0.5), 1.0)
+  scene.add newSphere((0.0, 0.0, -2.0), (0.4, 1.0, 0.4), 0.18, 1.0)
+  scene.add newSphere((1.0, 0.0, -3.0), (1.0, 1.0, 0.9), 0.18, 1.0)
+  scene.add newSphere((-1.0, -1.0, -2.0), (0.0, 1.0, 0.5), 0.18, 1.0)
+  
+  scene.add newLight((0.0, 0.0, 0.0), WHITE, 100.0)
 
   # render the scene to disk
   scene.render(filename)
