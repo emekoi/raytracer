@@ -37,10 +37,10 @@ proc newPlane*(origin: Vec3, color: Color, albedo: float, normal: Vec3): Plane =
   result.albedo = albedo
   result.normal = normal
 
-method intersect*(self: Shape, ray: Ray): Option[float] {.base.} =
+method intersect*(self: Shape, ray: Ray): Option[float] {.base, gcsafe.} =
   raise newException(Exception, "implement intersect")
 
-method surfaceNormal*(self: Shape, point: Vec3): Vec3 {.base.} =
+method surfaceNormal*(self: Shape, point: Vec3): Vec3 {.base, gcsafe.} =
   raise newException(Exception, "implement normal")
 
 method intersect*(self: Sphere, ray: Ray): Option[float] =

@@ -6,6 +6,9 @@
 
 
 import streams, math, options, future
+when defined(PARALLEL):
+  import threadpool
+  {.experimental.}
 import nimPNG
 import shape, light, ray, vec3, color
 
@@ -47,7 +50,7 @@ proc trace(self: Scene, ray: Ray): Option[Intersection] =
   var intersections: seq[Intersection] = @[]
 
   for obj in self.objects:
-    obj.intersect(ray).map proc(d: float) =
+    obj.intersect(ray).map (d: float) =>
       intersections.add Intersection(distance: d, shape: obj)
 
   if intersections.len >= 1:
@@ -60,51 +63,71 @@ proc trace(self: Scene, ray: Ray): Option[Intersection] =
 
   none(Intersection)
 
-proc render*(self: var Scene, output: string) =
-  # send a ray though each pixel
+proc getColor(self: var Scene, ray: Ray, intersection: Intersection): Color =
+  let
+    hitPoint = ray.origin + (ray.direction * intersection.distance)
+    surfaceNormal = intersection.shape.surfaceNormal(hitPoint)
+    lightReflected = intersection.shape.albedo / PI
+  for light in self.lights:
+    let
+      directionToLight = -light.direction.norm()
+      lightPower = (surfaceNormal ^ directionToLight).max(0.0) * light.intensity
+    result += intersection.shape.color * light.color * lightPower * lightReflected
+    if intersection.shape of Plane:
+      if lightReflected < 0.05:
+        echo "hit plane: ", lightReflected
+      discard
+    else:
+      # echo "hit sphrere: ", intersection.shape.albedo
+      discard
+  result.clamp()
 
-  for y in 0 ..< self.height:
-    for x in 0 ..< self.width:    
-      let
-        ray = prime(x, y, self.width, self.height, self.fov)
-        intersection = self.trace(ray)
-      
-      if intersection.isSome():
-        let
-          intersection = intersection.get()
-          hitPoint = ray.origin + (ray.direction * intersection.distance)
-          surfaceNormal = intersection.shape.surfaceNormal(hitPoint)
-        for light in self.lights:
-          let
-            directionToLight = -light.direction
-            lightPower = (surfaceNormal ^ directionToLight) * light.intensity
-            lightReflected = intersection.shape.albedo / PI
-            color = intersection.shape.color * light.color * lightPower * lightReflected
-          
-          self.setPixel(x, y, color)
-
-
-
-        # self.setPixel(x, y, i.shape.color)
-      
-      # for obj in self.objects:
-        # let i = obj
-
-          # color the pixel
-          # self.setPixel(x.int, y.int, obj.color)
-
-          # apply lighting
-          # for l in self.lights.mitems:
-          #   let
-          #     light = l.position - point
-          #     dt = light.norm() ^ o.normal(point).norm()
-          #   self.setPixel( x.int, y.int, l.color * dt)
-
-  # write to disk
-
+proc writeToDisk(self: Scene, output: string) =
   var buf = newStringOfCap(self.pixels.len * 3)
   for idx in 0 ..< self.pixels.len:
     buf.add $$self.pixels[idx]
   
   if not savePNG24(output, buf, self.width, self.height):
     echo "unable to write to " & output
+
+when defined(PARALLEL):
+  proc renderPoint(self: ptr Scene, x, y: int) =
+    let
+      ray = prime(x, y, self.width, self.height, self.fov)
+      intersection = self.trace(ray)
+    
+    if intersection.isSome():
+      let
+        i = intersection.get()
+        color = self.getColor(ray, i)
+      
+      self.setPixel(x, y, color)
+  
+  proc render*(self: var Scene, output: string) =
+    # send a ray though each pixel in parallel
+    parallel:
+      for y in 0 ..< self.height:
+        for x in 0 ..< self.width:
+          spawn renderPoint(self.addr, x, y)
+    
+    self.writeToDisk output
+else:
+  proc render*(self: var Scene, output: string) =
+    # send a ray though each pixel
+
+    for y in 0 ..< self.height:
+      for x in 0 ..< self.width:    
+        let
+          ray = prime(x, y, self.width, self.height, self.fov)
+          intersection = self.trace(ray)
+        
+        if intersection.isSome():
+          let
+            i = intersection.get()
+            color = self.getColor(ray, i)
+          
+          self.setPixel(x, y, color)
+
+    self.writeToDisk output
+
+    

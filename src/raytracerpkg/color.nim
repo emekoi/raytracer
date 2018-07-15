@@ -33,6 +33,11 @@ proc `$$`*(self: Color): string =
     $chr(lerp[float](0.0, 256.0, self.b).uint)
   ]
 
+proc clamp*(self: Color): Color =
+  result.x = self.x.clamp(0.0, 1.0)
+  result.y = self.y.clamp(0.0, 1.0)
+  result.z = self.z.clamp(0.0, 1.0)
+
 const
   WHITE* = (1.0, 1.0, 1.0).Color
   BLACK* = (0.0, 0.0, 0.0).Color
