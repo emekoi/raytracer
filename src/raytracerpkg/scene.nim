@@ -15,10 +15,10 @@ import shape, light, ray, vec3, color
 type Scene* = object
   objects*: seq[Shape]
   lights*: seq[Light]
-  width, height: int
-  pixels: seq[Color]
-  shadowBias: float
-  fov: float
+  width*, height*: int
+  pixels*: seq[Color]
+  shadowBias*: float
+  fov*: float
 
 proc newScene*(width, height: int, fov: float=90.0, shadowBias: float=1e-3): Scene =
   result.pixels = newSeq[Color](width * height)

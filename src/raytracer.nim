@@ -6,10 +6,8 @@
 
 import streams, random, math
 
-import raytracerpkg/[
-  vec3, ray, scene,
-  shape, color, light
-]
+include raytracerpkg/prelude
+import raytracerpkg/parser
 
 const
   WIDTH = 800
@@ -17,21 +15,24 @@ const
 
 proc main(filename: string) =
   # create a new scene
-  var scene = newScene(WIDTH, HEIGHT)
-  scene.add newPlane((0.0, -10.0, 1.0), (0.678, 0.847, 0.901), 0.18, (0.0, 0.0, -1.0))
-  # scene.add newPlane((0.0, 0.0, -10.0), (0.678, 0.3, 0.901), 0.18, (0.0, 0.0, -1.0))
-  # scene.add newPlane((0.0, -1.0, -10.0), (0.901, 0.847, 0.678), 0.18, (0.0, -1.0, 0.0))
-  # scene.add newPlane((0.0, 0.0, 0.0), (0.5, 0.5, 0.678), 0.18, (0.0, 0.0, 1.0))
+  # var scene = newScene(WIDTH, HEIGHT)
+  # scene.add newPlane((0.0, -10.0, 1.0), (0.678, 0.847, 0.901), 0.18, (0.0, 0.0, -1.0))
+  # # scene.add newPlane((0.0, 0.0, -10.0), (0.678, 0.3, 0.901), 0.18, (0.0, 0.0, -1.0))
+  # # scene.add newPlane((0.0, -1.0, -10.0), (0.901, 0.847, 0.678), 0.18, (0.0, -1.0, 0.0))
+  # # scene.add newPlane((0.0, 0.0, 0.0), (0.5, 0.5, 0.678), 0.18, (0.0, 0.0, 1.0))
   
 
-  scene.add newSphere((0.0, 0.0, -3.0), RED, 0.18, 1.0)
-  scene.add newSphere((1.0, 0.5, -2.0), GREEN, 0.18, 1.0)
-  scene.add newSphere((-1.0, -0.5, -4.0), BLUE, 0.18, 1.0)
+  # scene.add newSphere((0.0, 0.0, -3.0), RED, 0.18, 1.0)
+  # scene.add newSphere((1.0, 0.5, -2.0), GREEN, 0.18, 1.0)
+  # scene.add newSphere((-1.0, -0.5, -4.0), BLUE, 0.18, 1.0)
   
-  scene.add newLight((0.0, 0.0, -1.0), WHITE, 10.0)
+  # scene.add newLight((0.0, 0.0, -1.0), WHITE, 10.0)
 
-  # render the scene to disk
-  scene.render(filename)
+  # # render the scene to disk
+  # scene.render(filename)
+  discard parser.loadScene(filename)
+  
 
 # run the raytracer
-main("bin/out.png")
+# main("bin/out.png")
+main("scenes/test.json")
