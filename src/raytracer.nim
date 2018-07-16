@@ -4,15 +4,20 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
+import os, chronicles
 include raytracerpkg/prelude
 import raytracerpkg/parser
 
-proc main(filenames: varargs[string]) =
+proc main(filenames: openarray[string]) =
   var scene: Scene
   for file in filenames:
     # load a scene from disk and render it
     scene = parser.loadScene(file)
-    scene.render()
+    let (elapsed, success) = scene.render()
+    info "raytracing finished", scene = file, output = scene.output,
+      parallel = scene.parallel, elapsed = elapsed
+    if not success:
+      warn "unable to write to file", scene = file, output = scene.output
   
 # run the raytracer
-main("scenes/test0.json")
+main(commandLineParams())

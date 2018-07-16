@@ -7,9 +7,12 @@
 {.experimental.}
 
 import streams, math, options, threadpool
-import nimPNG, shape, light, ray, vec3, color
+import stb_image/[write, read], stopwatch, chronicles
+import shape, light, ray, vec3, color
 
-const PARTITION_SIZE = 2
+const
+  RENDER_PARTITION_SIZE = 2  
+  CONVERT_PARTITION_SIZE = RENDER_PARTITION_SIZE * 2
 
 type Scene* = object
   objects*: seq[Shape]
@@ -21,7 +24,7 @@ type Scene* = object
   output*: string
   parallel*: bool
 
-proc newScene*(width, height: int, output: string, parallel: bool=false, fov: float=90.0, shadowBias: float=1e-3): Scene =
+proc newScene*(width, height: int, output: string, parallel: bool=true, fov: float=90.0, shadowBias: float=1e-3): Scene =
   result.pixels = newSeq[Color](width * height)
   result.objects = @[]
   result.lights = @[]
@@ -52,29 +55,33 @@ proc add*(self: var Scene, light: Light) =
   self.lights.add light
 
 proc trace(self: Scene, ray: Ray): Option[Intersection] =
-  var intersections: seq[Intersection] = @[]
+  var intersection = Intersection(
+    distance: float.high(),
+    shape: nil
+  )
 
   for obj in self.objects:
     when true:
       let distance = obj.intersect(ray)
       if distance.isSome():
-        intersections.add Intersection(
-          distance: distance.get(),
-          shape: obj
-        )
+        let distance = distance.get()
+        if distance < intersection.distance:
+          intersection = Intersection(
+            distance: distance,
+            shape: obj
+          )
     else:
       # this gives a segfault
-      obj.intersect(ray).map proc(d: float) =
-        let i = Intersection(distance: d, shape: obj)
-        intersections.add i
-
-  if intersections.len >= 1:
-    var least = intersections[0]
-    for i in intersections:
-      if i.distance < least.distance:
-        least = i
-    return some(least)
-  none(Intersection)
+      obj.intersect(ray).map proc(distance: float) =
+        if distance < intersection.distance:
+          intersection = Intersection(
+            distance: distance,
+            shape: obj
+          )
+  if intersection.shape.isNil():
+    none(Intersection)
+  else:
+    some(intersection)
 
 proc getColor(self: var Scene, ray: Ray, intersection: Intersection): Color =
   let
@@ -99,14 +106,6 @@ proc getColor(self: var Scene, ray: Ray, intersection: Intersection): Color =
       discard
   result.clamp()
 
-proc writeToDisk(self: Scene) =
-  var buf = newStringOfCap(self.pixels.len * 3)
-  for idx in 0 ..< self.pixels.len:
-    buf.add $$self.pixels[idx]
-
-  if not savePNG24(self.output, buf, self.width, self.height):
-    echo "unable to write to " & self.output
-
 proc renderPartition(self: ptr Scene, sx, sy: Slice[int]) =
   for y in sy:
     for x in sx:
@@ -124,15 +123,19 @@ proc renderPartition(self: ptr Scene, sx, sy: Slice[int]) =
 proc renderParallel*(self: var Scene) =
   # send a ray though each pixel in parallel
   let
-    stepX = self.width div PARTITION_SIZE
-    stepY = self.height div PARTITION_SIZE
-  # parallel:
-  for y in 0..<PARTITION_SIZE:
-    for x in 0..<PARTITION_SIZE:
-      let
-        px = (x * stepX)..<(stepX * (x + 1)).min(self.width)
-        py = (y * stepY)..<(stepY * (y + 1)).min(self.height)
-      spawn renderPartition(self.addr, px, py)
+    stepX = block:
+      let sx = self.width div RENDER_PARTITION_SIZE
+      if sx == 0: self.width else: sx
+    stepY = block:
+      let sy = self.height div RENDER_PARTITION_SIZE
+      if sy == 0: self.width else: sy
+  parallel:
+    for y in 0..<RENDER_PARTITION_SIZE:
+      for x in 0..<RENDER_PARTITION_SIZE:
+        let
+          px = (x * stepX)..<(stepX * (x + 1)).min(self.width)
+          py = (y * stepY)..<(stepY * (y + 1)).min(self.height)
+        spawn renderPartition(self.addr, px, py)
 
 proc renderNormal*(self: var Scene) =
   # send a ray though each pixel
@@ -149,9 +152,54 @@ proc renderNormal*(self: var Scene) =
         
         self.setPixel(x, y, color)
 
-proc render*(self: var Scene) =
-  if not self.parallel:
-    self.renderNormal()
+template lerp[T](a, b, p: T): untyped =
+  ((T(1) - p) * a + p * b)
+
+proc convertPartition(self: Scene, pixels: ptr seq[byte], partition: Slice[int]) =
+  for idx in partition:
+    pixels[idx * 3 + 0] = lerp(0.0, 256.0, self.pixels[idx].x).uint8
+    pixels[idx * 3 + 1] = lerp(0.0, 256.0, self.pixels[idx].y).uint8
+    pixels[idx * 3 + 2] = lerp(0.0, 256.0, self.pixels[idx].z).uint8
+
+proc convertParallel(self: Scene, pixels: var seq[byte]) =
+  let
+    size = self.pixels.len
+    step = block:
+      # we multiply by 2 so we use the same number
+      # of thread we do when raycasting. or at least
+      # thats what i think this will do.
+      let s = size div CONVERT_PARTITION_SIZE
+      if s == 0: size else: s
+  parallel:
+    for idx in 0..<CONVERT_PARTITION_SIZE:
+      let partition = (idx * step)..<(step * (idx + 1)).min(size)
+      spawn convertPartition(self, pixels.addr, partition)
+
+proc convertNormal(self: Scene, pixels: var seq[byte]) =
+  for idx in 0 ..< self.pixels.len:
+    pixels[idx * 3 + 0] = lerp(0.0, 256.0, self.pixels[idx].x).uint8
+    pixels[idx * 3 + 1] = lerp(0.0, 256.0, self.pixels[idx].y).uint8
+    pixels[idx * 3 + 2] = lerp(0.0, 256.0, self.pixels[idx].z).uint8
+
+proc writeImage(self: Scene): bool =
+  var pixels = newSeq[byte](self.pixels.len * 3)
+
+  # convert to 0-255 rgb format
+  if self.parallel:
+    self.convertParallel(pixels)
   else:
-    self.renderParallel()
-  self.writeToDisk()
+    self.convertNormal(pixels)
+    
+  writePNG(self.output, self.width, self.height, RGB, pixels)
+
+proc render*(self: var Scene): (float, bool) =
+  var watch = stopwatch(false)
+
+  watch.bench:
+    if self.parallel: 
+      self.renderParallel()
+    else:
+      self.renderNormal()
+  
+  (watch.secs(), self.writeImage())
+  

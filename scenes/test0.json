@@ -37,7 +37,7 @@
   "width": 800,
   "height": 600,
   "output": "bin/test0.png",
-  "parallel": false,
+  "parallel": true,
   "shadowBias": 1e-3,
   "fov": 90.0
 }

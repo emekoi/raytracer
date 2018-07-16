@@ -7,8 +7,9 @@
 import tables, json, streams
 include prelude
 
-proc getShadowBias(self: var Scene, node: JsonNode)
-proc getFov(self: var Scene, node: JsonNode)
+proc setParallel(self: var Scene, node: JsonNode)
+proc setShadowBias(self: var Scene, node: JsonNode)
+proc setFov(self: var Scene, node: JsonNode)
 proc getObjects(self: var Scene, node: JsonNode)
 proc getSphere(self: var Scene, node: JsonNode)
 proc getPlane(self: var Scene, node: JsonNode)
@@ -20,10 +21,13 @@ proc getVec3(node: JsonNode): Vec3 =
   result.y = node[1].getFloat()
   result.z = node[2].getFloat()
 
-proc getShadowBias(self: var Scene, node: JsonNode) =
+proc setParallel(self: var Scene, node: JsonNode) =
+  self.parallel = node.getBool()
+
+proc setShadowBias(self: var Scene, node: JsonNode) =
   self.shadowBias = node.getFloat()
 
-proc getFov(self: var Scene, node: JsonNode) =
+proc setFov(self: var Scene, node: JsonNode) =
   self.fov = node.getFloat()
 
 proc getObjects(self: var Scene, node: JsonNode) =
@@ -71,8 +75,9 @@ proc getDirectionalLight(self: var Scene, node: JsonNode) =
     self.add light
 
 const PARSER = {
-  "shadowBias": getShadowBias,
-  "fov": getFov,
+  "parallel": setParallel,
+  "shadowBias": setShadowBias,
+  "fov": setFov,
   "objects": getObjects,
   "lights": getLights,
 }.toTable()
@@ -83,8 +88,7 @@ proc loadScene*(filename: string): Scene =
     width = file["width"].getInt()
     height = file["height"].getInt()
     output = file["output"].getStr()
-    parallel = file["parallel"].getBool()
-  result = newScene(width, height, output, parallel)
+  result = newScene(width, height, output)
   for key, value in file:
     if PARSER.hasKey(key):
       PARSER[key](result, value)

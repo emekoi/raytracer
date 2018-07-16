@@ -24,16 +24,6 @@ template `b`*(cself: Color): float = self.z
 template `b=`*(self: var Color, v: float) =
   self.z = v
 
-template lerp[T](a, b, p: T): untyped =
-  ((T(1) - p) * a + p * b)
-
-proc `$$`*(self: Color): string =
-  return "$#$#$#" % [
-    $chr(lerp[float](0.0, 256.0, self.r).uint),
-    $chr(lerp[float](0.0, 256.0, self.g).uint),
-    $chr(lerp[float](0.0, 256.0, self.b).uint)
-  ]
-
 proc clamp*(self: Color): Color =
   result.x = self.x.clamp(0.0, 1.0)
   result.y = self.y.clamp(0.0, 1.0)
