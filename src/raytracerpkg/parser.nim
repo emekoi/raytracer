@@ -7,33 +7,86 @@
 import tables, json, streams
 include prelude
 
-const PARSER_PROC = {
-  "width": proc(self: var Scene, node: JsonNode) =
-    self.width = node.getInt(),
-  "height": proc(self: var Scene, node: JsonNode) =
-    self.height = node.getInt(),
-  "shadowBias": proc(self: var Scene, node: JsonNode) =
-    self.shadowBias = node.getFloat(),
-  "fov":  proc(self: var Scene, node: JsonNode) =
-    self.fov = node.getFloat(),
-  "objects": proc(self: var Scene, node: JsonNode) =
-    for obj in node:
-      echo obj.str
+proc getShadowBias(self: var Scene, node: JsonNode)
+proc getFov(self: var Scene, node: JsonNode)
+proc getObjects(self: var Scene, node: JsonNode)
+proc getSphere(self: var Scene, node: JsonNode)
+proc getPlane(self: var Scene, node: JsonNode)
+proc getLights(self: var Scene, node: JsonNode)
+proc getDirectionalLight(self: var Scene, node: JsonNode)
+
+proc getVec3(node: JsonNode): Vec3 =
+  result.x = node[0].getFloat()
+  result.y = node[1].getFloat()
+  result.z = node[2].getFloat()
+
+proc getShadowBias(self: var Scene, node: JsonNode) =
+  self.shadowBias = node.getFloat()
+
+proc getFov(self: var Scene, node: JsonNode) =
+  self.fov = node.getFloat()
+
+proc getObjects(self: var Scene, node: JsonNode) =
+  for kind, obj in node:
+    case kind:
+      of "sphere":
+        self.getSphere(obj)
+      of "plane":
+        self.getPlane(obj)
+      else:
+        discard
+
+proc getSphere(self: var Scene, node: JsonNode) =
+  for sphere in node:
+    var shape = Sphere()
+    shape.origin = sphere["origin"].getVec3()
+    shape.color = sphere["color"].getVec3()
+    shape.albedo = sphere["albedo"].getFloat()
+    shape.radius = sphere["radius"].getFloat()
+    self.add shape
+
+proc getPlane(self: var Scene, node: JsonNode) =
+  for plane in node:
+    var shape = Plane()
+    shape.origin = plane["origin"].getVec3()
+    shape.color = plane["color"].getVec3()
+    shape.albedo = plane["albedo"].getFloat()
+    shape.normal = plane["normal"].getVec3()
+    self.add shape
+
+proc getLights(self: var Scene, node: JsonNode) =
+  for kind, obj in node:
+    case kind:
+      of "directional":
+        self.getDirectionalLight(obj)
+      else:
+        discard
+
+proc getDirectionalLight(self: var Scene, node: JsonNode) =
+  for directionalLight in node:
+    var light = Light()
+    light.direction = directionalLight["direction"].getVec3()
+    light.color = directionalLight["color"].getVec3()
+    light.intensity = directionalLight["intensity"].getFloat()
+    self.add light
+
+const PARSER = {
+  "shadowBias": getShadowBias,
+  "fov": getFov,
+  "objects": getObjects,
+  "lights": getLights,
 }.toTable()
 
-proc testData*() =
-  var scene = newScene(800, 600)
-  scene.add newPlane((0.0, -10.0, 1.0), (0.678, 0.847, 0.901), 0.18, (0.0, 0.0, -1.0))
-  scene.add newSphere((0.0, 0.0, -3.0), RED, 0.18, 1.0)
-  scene.add newSphere((1.0, 0.5, -2.0), GREEN, 0.18, 1.0)
-  scene.add newSphere((-1.0, -0.5, -4.0), BLUE, 0.18, 1.0)
-  scene.add newLight((0.0, 0.0, -1.0), WHITE, 10.0)
-  scene.pixels = nil
-  let file = open("bin/test.json", fmWrite).newFileStream()
-  # file.write $$scene
-  file.close
-
 proc loadScene*(filename: string): Scene =
-  let node = filename.parseFile()
-  echo node["width"]
+  let
+    file = filename.parseFile()
+    width = file["width"].getInt()
+    height = file["height"].getInt()
+    output = file["output"].getStr()
+    parallel = file["parallel"].getBool()
+  result = newScene(width, height, output, parallel)
+  for key, value in file:
+    if PARSER.hasKey(key):
+      PARSER[key](result, value)
+  
 

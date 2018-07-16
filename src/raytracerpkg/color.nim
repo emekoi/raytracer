@@ -4,7 +4,8 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import strutils, vec3
+import strutils
+import vec3
 
 type Color* = Vec3
 

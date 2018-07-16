@@ -6,10 +6,6 @@
 
 import vec3, color
 
-# type Light* = tuple
-#   position: Vec3
-#   color: Color
-
 type Light* = ref object of RootObj
   direction*: Vec3
   color*: Color

@@ -4,7 +4,8 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import math, vec3
+import math
+import vec3
 
 type Ray* = tuple
   origin, direction: Vec3

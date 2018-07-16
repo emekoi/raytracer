@@ -1,2 +1,1 @@
-# switch("define", "PARALLEL")
-# switch("threads", "on")
+switch("threads", "on")

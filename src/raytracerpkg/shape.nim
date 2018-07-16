@@ -18,10 +18,10 @@ type
     shape*: Shape
 
   Sphere* = ref object of Shape
-    radius: float
+    radius*: float
   
   Plane* = ref object of Shape
-    normal: Vec3
+    normal*: Vec3
 
 proc newSphere*(origin: Vec3, color: Color, albedo: float, radius: float): Sphere =
   new result
