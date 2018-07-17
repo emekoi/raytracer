@@ -142,9 +142,9 @@ template lerp[T](a, b, p: T): untyped =
 
 proc convertPartition(self: Scene, pixels: var seq[byte], partition: Slice[int]) =
   for idx in partition:
-    pixels[idx * 3 + 0] = lerp(0.0, 256.0, self.pixels[idx].x).uint8
-    pixels[idx * 3 + 1] = lerp(0.0, 256.0, self.pixels[idx].y).uint8
-    pixels[idx * 3 + 2] = lerp(0.0, 256.0, self.pixels[idx].z).uint8
+    pixels[idx * 3 + 0] = lerp(0.0, 255.99, self.pixels[idx].x).uint8
+    pixels[idx * 3 + 1] = lerp(0.0, 255.99, self.pixels[idx].y).uint8
+    pixels[idx * 3 + 2] = lerp(0.0, 255.99, self.pixels[idx].z).uint8
 
 proc convertParallel(self: Scene, pixels: var seq[byte]) =
   let
@@ -167,7 +167,8 @@ proc writeImage(self: Scene): bool =
   if self.parallel:
     self.convertParallel(pixels)
   else:
-    self.convertPartition(pixels, 0 ..< self.pixels.len)
+    let s = 0 ..< self.pixels.len
+    self.convertPartition(pixels, s)
     
   writePNG(self.output, self.width, self.height, RGB, pixels)
 
