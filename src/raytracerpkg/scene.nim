@@ -106,7 +106,7 @@ proc getColor(self: var Scene, ray: Ray, intersection: Intersection): Color =
       discard
   result.clamp()
 
-proc renderPartition(self: ptr Scene, sx, sy: Slice[int]) =
+proc renderPartition(self: var Scene, sx, sy: Slice[int]) =
   for y in sy:
     for x in sx:
       let
@@ -137,25 +137,10 @@ proc renderParallel*(self: var Scene) =
           py = (y * stepY)..<(stepY * (y + 1)).min(self.height)
         spawn renderPartition(self.addr, px, py)
 
-proc renderNormal*(self: var Scene) =
-  # send a ray though each pixel
-  for y in 0 ..< self.height:
-    for x in 0 ..< self.width:    
-      let
-        ray = prime(x, y, self.width, self.height, self.fov)
-        intersection = self.trace(ray)
-      
-      if intersection.isSome():
-        let
-          i = intersection.get()
-          color = self.getColor(ray, i)
-        
-        self.setPixel(x, y, color)
-
 template lerp[T](a, b, p: T): untyped =
   ((T(1) - p) * a + p * b)
 
-proc convertPartition(self: Scene, pixels: ptr seq[byte], partition: Slice[int]) =
+proc convertPartition(self: Scene, pixels: var seq[byte], partition: Slice[int]) =
   for idx in partition:
     pixels[idx * 3 + 0] = lerp(0.0, 256.0, self.pixels[idx].x).uint8
     pixels[idx * 3 + 1] = lerp(0.0, 256.0, self.pixels[idx].y).uint8
@@ -173,13 +158,7 @@ proc convertParallel(self: Scene, pixels: var seq[byte]) =
   parallel:
     for idx in 0..<CONVERT_PARTITION_SIZE:
       let partition = (idx * step)..<(step * (idx + 1)).min(size)
-      spawn convertPartition(self, pixels.addr, partition)
-
-proc convertNormal(self: Scene, pixels: var seq[byte]) =
-  for idx in 0 ..< self.pixels.len:
-    pixels[idx * 3 + 0] = lerp(0.0, 256.0, self.pixels[idx].x).uint8
-    pixels[idx * 3 + 1] = lerp(0.0, 256.0, self.pixels[idx].y).uint8
-    pixels[idx * 3 + 2] = lerp(0.0, 256.0, self.pixels[idx].z).uint8
+      spawn convertPartition(self, pixels, partition)
 
 proc writeImage(self: Scene): bool =
   var pixels = newSeq[byte](self.pixels.len * 3)
@@ -188,7 +167,7 @@ proc writeImage(self: Scene): bool =
   if self.parallel:
     self.convertParallel(pixels)
   else:
-    self.convertNormal(pixels)
+    self.convertPartition(pixels, 0 ..< self.pixels.len)
     
   writePNG(self.output, self.width, self.height, RGB, pixels)
 
@@ -199,7 +178,10 @@ proc render*(self: var Scene): (float, bool) =
     if self.parallel: 
       self.renderParallel()
     else:
-      self.renderNormal()
+      let
+        sx = 0 ..< self.width
+        sy = 0 ..< self.height
+      self.renderPartition(sx, sy)
   
   (watch.secs(), self.writeImage())
   
