@@ -10,7 +10,7 @@ bin           = @["raytracer"]
 
 # Dependencies
 
-requires "nim >= 0.18.0"
+requires "nim >= 0.18.1"
 requires "https://github.com/emekoi/stb_image-nim >= 2.1.1"
 requires "stopwatch >= 3.4.0"
 requires "chronicles >= 0.2.0"

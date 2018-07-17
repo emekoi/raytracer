@@ -4,4 +4,5 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import color, ray, scene, hitable, vec3
+template lerp*[T](a, b, p: T): untyped =
+  ((T(1.0) - p) * a + p * b)

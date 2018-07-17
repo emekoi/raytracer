@@ -15,13 +15,10 @@ type
 
   Intersection* = object
     distance*: float
-    shape*: Hitable
+    hitable*: Hitable
 
   Sphere* = ref object of Hitable
     radius*: float
-  
-  Plane* = ref object of Hitable
-    normal*: Vec3
 
 proc newSphere*(origin: Vec3, color: Color, albedo: float, radius: float): Sphere =
   new result
@@ -29,13 +26,6 @@ proc newSphere*(origin: Vec3, color: Color, albedo: float, radius: float): Spher
   result.color = color
   result.albedo = albedo
   result.radius = radius
-  
-proc newPlane*(origin: Vec3, color: Color, albedo: float, normal: Vec3): Plane =
-  new result
-  result.origin = origin
-  result.color = color
-  result.albedo = albedo
-  result.normal = normal
 
 method intersect*(self: Hitable, ray: Ray): Option[float] {.base, gcsafe.} =
   raise newException(Exception, "implement intersect")
@@ -65,16 +55,3 @@ method intersect*(self: Sphere, ray: Ray): Option[float] =
 
 method surfaceNormal*(self: Sphere, point: Vec3): Vec3 =
   (point - self.origin).norm()
-
-method intersect*(self: Plane, ray: Ray): Option[float] =
-  let denom = self.normal ^ ray.direction
-  if denom > 1e-6:
-    let
-      v = self.origin - ray.origin
-      dist = (v ^ self.normal) / denom
-    if dist >= 0.0:
-      return some(dist)
-  none(float)
-
-method surfaceNormal*(self: Plane, _: Vec3): Vec3 =
-  -self.normal

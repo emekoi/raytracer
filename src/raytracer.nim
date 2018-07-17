@@ -20,6 +20,4 @@ proc main(filenames: openarray[string]) =
       warn "unable to write to file", scene = file, output = scene.output
   
 # run the raytracer
-# main(commandLineParams())
-
-echo (2.0, 3.0, 4.0) % (5.0, 6.0, 7.0)
+main(commandLineParams())

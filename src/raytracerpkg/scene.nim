@@ -8,32 +8,26 @@
 
 import streams, math, options, threadpool
 import stb_image/[write, read], stopwatch, chronicles
-import hitable, light, ray, vec3, color
+import hitable, ray, vec3, color, util
 
 const
   RENDER_PARTITION_SIZE = 2  
   CONVERT_PARTITION_SIZE = RENDER_PARTITION_SIZE * 2
 
 type Scene* = object
-  objects*: seq[Hitable]
-  lights*: seq[Light]
+  hitables*: seq[Hitable]
   width*, height*: int
   pixels*: seq[Color]
-  shadowBias*: float
-  fov*: float
   output*: string
   parallel*: bool
 
-proc newScene*(width, height: int, output: string, parallel: bool=true, fov: float=90.0, shadowBias: float=1e-3): Scene =
+proc newScene*(width, height: int, output: string, parallel: bool=true): Scene =
   result.pixels = newSeq[Color](width * height)
-  result.objects = @[]
-  result.lights = @[]
+  result.hitables = @[]
   result.width = width
   result.height = height
   result.output = output
   result.parallel = parallel
-  result.shadowBias = shadowBias
-  result.fov = fov
   
 proc setPixel*(self: var Scene, x, y: int, color: Color) =
   if x > self.width or x < 0: return
@@ -46,79 +40,31 @@ proc getPixel*(self: Scene, x, y: int): Color =
   return self.pixels[x + y * self.width]
 
 proc count*(self: Scene): int =
-  self.objects.len
+  self.hitables.len
 
 proc add*(self: var Scene, hitable: Hitable) =
-  self.objects.add hitable
+  self.hitables.add hitable
 
-proc add*(self: var Scene, light: Light) =
-  self.lights.add light
-
-proc trace(self: Scene, ray: Ray): Option[Intersection] =
-  var intersection = Intersection(
-    distance: float.high(),
-    shape: nil
-  )
-
-  for obj in self.objects:
-    when true:
-      let distance = obj.intersect(ray)
-      if distance.isSome():
-        let distance = distance.get()
-        if distance < intersection.distance:
-          intersection = Intersection(
-            distance: distance,
-            shape: obj
-          )
-    else:
-      # this gives a segfault
-      obj.intersect(ray).map proc(distance: float) =
-        if distance < intersection.distance:
-          intersection = Intersection(
-            distance: distance,
-            shape: obj
-          )
-  if intersection.shape.isNil():
-    none(Intersection)
-  else:
-    some(intersection)
-
-proc getColor(self: var Scene, ray: Ray, intersection: Intersection): Color =
+proc getColor(ray: Ray): Color =
   let
-    hitPoint = ray.origin + (ray.direction * intersection.distance)
-    surfaceNormal = intersection.shape.surfaceNormal(hitPoint)
-    lightReflected = intersection.shape.albedo / PI
-  for light in self.lights:
-    let
-      directionToLight = -light.direction.norm()
-      shadowRay = (hitPoint + (surfaceNormal * self.shadowBias),
-        directionToLight).Ray
-      inLight = self.trace(shadowRay).isNone()
-      lightIntensity = if inLight: light.intensity else: 0.0
-      lightPower = (surfaceNormal ^ directionToLight).max(0.0) * lightIntensity
-    result += intersection.shape.color * light.color * lightPower * lightReflected
+    unit_direction = ray.direction.norm()
+    t = 0.5 * (unit_direction.y + 1.0)
+  result = ((1.0, 1.0, 1.0) * (1.0 - t)) + ((0.5, 0.7, 1.0) * t)
+  return result.clamp()
 
-    if intersection.shape of Plane:
-      # echo (surfaceNormal)
-      discard
-    else:
-      # echo "hit sphrere: ", intersection.shape.albedo
-      discard
-  result.clamp()
-
-proc renderPartition(self: ptr Scene, sx, sy: Slice[int]) =
+proc renderPartition(self: var Scene, sx, sy: Slice[int]) =
+  let
+    lower_left_corner = (-2.0, -1.0, -1.0)
+    horizontal = (4.0, 0.0, 0.0)
+    vertical = (0.0, 2.0, 0.0)
+    origin = (0.0, 0.0, 0.0)
   for y in sy:
     for x in sx:
       let
-        ray = prime(x, y, self.width, self.height, self.fov)
-        intersection = self.trace(ray)
-      
-      if intersection.isSome():
-        let
-          i = intersection.get()
-          color = self.getColor(ray, i)
-        
-        self.setPixel(x, y, color)
+        u = float(x) / float(self.width)
+        v = float(y) / float(self.height)
+        ray = (origin, lower_left_corner + horizontal * u + vertical * v)
+      self.setPixel(x, y, ray.getColor())
 
 proc renderParallel*(self: var Scene) =
   # send a ray though each pixel in parallel
@@ -135,31 +81,13 @@ proc renderParallel*(self: var Scene) =
         let
           px = (x * stepX)..<(stepX * (x + 1)).min(self.width)
           py = (y * stepY)..<(stepY * (y + 1)).min(self.height)
-        spawn renderPartition(self.addr, px, py)
+        spawn renderPartition(self, px, py)
 
-proc renderNormal*(self: var Scene) =
-  # send a ray though each pixel
-  for y in 0 ..< self.height:
-    for x in 0 ..< self.width:    
-      let
-        ray = prime(x, y, self.width, self.height, self.fov)
-        intersection = self.trace(ray)
-      
-      if intersection.isSome():
-        let
-          i = intersection.get()
-          color = self.getColor(ray, i)
-        
-        self.setPixel(x, y, color)
-
-template lerp[T](a, b, p: T): untyped =
-  ((T(1) - p) * a + p * b)
-
-proc convertPartition(self: Scene, pixels: ptr seq[byte], partition: Slice[int]) =
+proc convertPartition(self: Scene, pixels: var seq[byte], partition: Slice[int]) =
   for idx in partition:
-    pixels[idx * 3 + 0] = lerp(0.0, 256.0, self.pixels[idx].x).uint8
-    pixels[idx * 3 + 1] = lerp(0.0, 256.0, self.pixels[idx].y).uint8
-    pixels[idx * 3 + 2] = lerp(0.0, 256.0, self.pixels[idx].z).uint8
+    pixels[idx * 3 + 0] = lerp(0.0, 255.99, self.pixels[idx].x).uint8
+    pixels[idx * 3 + 1] = lerp(0.0, 255.99, self.pixels[idx].y).uint8
+    pixels[idx * 3 + 2] = lerp(0.0, 255.99, self.pixels[idx].z).uint8
 
 proc convertParallel(self: Scene, pixels: var seq[byte]) =
   let
@@ -173,13 +101,7 @@ proc convertParallel(self: Scene, pixels: var seq[byte]) =
   parallel:
     for idx in 0..<CONVERT_PARTITION_SIZE:
       let partition = (idx * step)..<(step * (idx + 1)).min(size)
-      spawn convertPartition(self, pixels.addr, partition)
-
-proc convertNormal(self: Scene, pixels: var seq[byte]) =
-  for idx in 0 ..< self.pixels.len:
-    pixels[idx * 3 + 0] = lerp(0.0, 256.0, self.pixels[idx].x).uint8
-    pixels[idx * 3 + 1] = lerp(0.0, 256.0, self.pixels[idx].y).uint8
-    pixels[idx * 3 + 2] = lerp(0.0, 256.0, self.pixels[idx].z).uint8
+      spawn convertPartition(self, pixels, partition)
 
 proc writeImage(self: Scene): bool =
   var pixels = newSeq[byte](self.pixels.len * 3)
@@ -188,7 +110,8 @@ proc writeImage(self: Scene): bool =
   if self.parallel:
     self.convertParallel(pixels)
   else:
-    self.convertNormal(pixels)
+    let s = 0 ..< self.pixels.len
+    self.convertPartition(pixels, s)
     
   writePNG(self.output, self.width, self.height, RGB, pixels)
 
@@ -199,7 +122,10 @@ proc render*(self: var Scene): (float, bool) =
     if self.parallel: 
       self.renderParallel()
     else:
-      self.renderNormal()
+      let
+        sx = 0 ..< self.width
+        sy = 0 ..< self.height
+      self.renderPartition(sx, sy)
   
   (watch.secs(), self.writeImage())
   
