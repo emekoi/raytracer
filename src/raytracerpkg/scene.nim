@@ -8,14 +8,14 @@
 
 import streams, math, options, threadpool
 import stb_image/[write, read], stopwatch, chronicles
-import shape, light, ray, vec3, color
+import hitable, light, ray, vec3, color
 
 const
   RENDER_PARTITION_SIZE = 2  
   CONVERT_PARTITION_SIZE = RENDER_PARTITION_SIZE * 2
 
 type Scene* = object
-  objects*: seq[Shape]
+  objects*: seq[Hitable]
   lights*: seq[Light]
   width*, height*: int
   pixels*: seq[Color]
@@ -48,8 +48,8 @@ proc getPixel*(self: Scene, x, y: int): Color =
 proc count*(self: Scene): int =
   self.objects.len
 
-proc add*(self: var Scene, shape: Shape) =
-  self.objects.add shape
+proc add*(self: var Scene, hitable: Hitable) =
+  self.objects.add hitable
 
 proc add*(self: var Scene, light: Light) =
   self.lights.add light

@@ -8,19 +8,19 @@ import math, options
 import vec3, ray, color
 
 type
-  Shape* = ref object of RootObj
+  Hitable* = ref object of RootObj
     origin*: Vec3
     color*: Color
     albedo*: float
 
   Intersection* = object
     distance*: float
-    shape*: Shape
+    shape*: Hitable
 
-  Sphere* = ref object of Shape
+  Sphere* = ref object of Hitable
     radius*: float
   
-  Plane* = ref object of Shape
+  Plane* = ref object of Hitable
     normal*: Vec3
 
 proc newSphere*(origin: Vec3, color: Color, albedo: float, radius: float): Sphere =
@@ -37,10 +37,10 @@ proc newPlane*(origin: Vec3, color: Color, albedo: float, normal: Vec3): Plane =
   result.albedo = albedo
   result.normal = normal
 
-method intersect*(self: Shape, ray: Ray): Option[float] {.base, gcsafe.} =
+method intersect*(self: Hitable, ray: Ray): Option[float] {.base, gcsafe.} =
   raise newException(Exception, "implement intersect")
 
-method surfaceNormal*(self: Shape, point: Vec3): Vec3 {.base, gcsafe.} =
+method surfaceNormal*(self: Hitable, point: Vec3): Vec3 {.base, gcsafe.} =
   raise newException(Exception, "implement normal")
 
 method intersect*(self: Sphere, ray: Ray): Option[float] =

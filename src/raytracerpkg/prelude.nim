@@ -4,4 +4,4 @@
 #  under the terms of the MIT license. See LICENSE for details.
 #
 
-import color, light, ray, scene, shape, vec3
+import color, light, ray, scene, hitable, vec3
