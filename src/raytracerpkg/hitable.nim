@@ -35,23 +35,15 @@ method surfaceNormal*(self: Hitable, point: Vec3): Vec3 {.base, gcsafe.} =
 
 method intersect*(self: Sphere, ray: Ray): Option[float] =
   let
-    l = self.origin - ray.origin
-    adj = l ^ ray.direction
-    d2 = (l ^ l) - (adj ^ 2)
-    r2 = self.radius ^ 2
-  
-  if d2 > r2:
-    return none(float)
-
-  let
-    thc = (r2 - d2).sqrt()
-    t0 = adj - thc
-    t1 = adj + thc
-  
-  if t0 < 0.0 and t1 < 0.0:
-    return none(float)
-
-  some(t0.min(t1))
+    oc = ray.origin - self.origin
+    a = ray.direction ^ ray.direction
+    b = 2.0 * (oc ^ ray.direction)
+    c = (oc ^ oc) - (self.radius ^ 2)
+    discriminant = (b ^ 2) - 4 * a * c
+  if discriminant > 0:
+    some(discriminant)
+  else:
+    none(float)
 
 method surfaceNormal*(self: Sphere, point: Vec3): Vec3 =
   (point - self.origin).norm()

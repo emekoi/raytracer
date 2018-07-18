@@ -45,10 +45,13 @@ proc count*(self: Scene): int =
 proc add*(self: var Scene, hitable: Hitable) =
   self.hitables.add hitable
 
-proc getColor(ray: Ray): Color =
+proc getColor(self: Scene, ray: Ray): Color =
+  for hitable in self.hitables:
+    if hitable.intersect(ray).isSome():
+      return hitable.color
   let
     unit_direction = ray.direction.norm()
-    t = 0.5 * (unit_direction.y + 1.0)
+    t = 0.5 * (-unit_direction.y + 2.0)
   result = ((1.0, 1.0, 1.0) * (1.0 - t)) + ((0.5, 0.7, 1.0) * t)
   return result.clamp()
 
@@ -64,7 +67,7 @@ proc renderPartition(self: var Scene, sx, sy: Slice[int]) =
         u = float(x) / float(self.width)
         v = float(y) / float(self.height)
         ray = (origin, lower_left_corner + horizontal * u + vertical * v)
-      self.setPixel(x, y, ray.getColor())
+      self.setPixel(x, y, self.getColor(ray))
 
 proc renderParallel*(self: var Scene) =
   # send a ray though each pixel in parallel
