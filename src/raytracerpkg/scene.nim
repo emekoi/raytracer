@@ -55,33 +55,27 @@ proc add*(self: var Scene, light: Light) =
   self.lights.add light
 
 proc trace(self: Scene, ray: Ray): Option[Intersection] =
-  var intersection = Intersection(
-    distance: float.high(),
-    shape: nil
-  )
+  result = none(Intersection)
+  # let result_ptr = result.addr
 
   for obj in self.objects:
     when true:
       let distance = obj.intersect(ray)
       if distance.isSome():
         let distance = distance.get()
-        if distance < intersection.distance:
-          intersection = Intersection(
+        if result.isNone() or distance < result.unsafeGet().distance:
+          result = some(Intersection(
             distance: distance,
             shape: obj
-          )
+          ))
     else:
       # this gives a segfault
       obj.intersect(ray).map proc(distance: float) =
-        if distance < intersection.distance:
-          intersection = Intersection(
+        if result_ptr.isNone() or distance < result_ptr.unsafeGet().distance:
+          result_ptr[] = some(Intersection(
             distance: distance,
             shape: obj
-          )
-  if intersection.shape.isNil():
-    none(Intersection)
-  else:
-    some(intersection)
+          ))
 
 proc getColor(self: var Scene, ray: Ray, intersection: Intersection): Color =
   let
