@@ -40,10 +40,10 @@ method intersect*(self: Sphere, ray: Ray): Option[float] =
     b = 2.0 * (oc ^ ray.direction)
     c = (oc ^ oc) - (self.radius ^ 2)
     discriminant = (b ^ 2) - 4 * a * c
-  if discriminant > 0:
-    some(discriminant)
+  if discriminant < 0:
+    some(-1.0)
   else:
-    none(float)
+    some((-b - discriminant.sqrt()) / (2.0 * a))
 
 method surfaceNormal*(self: Sphere, point: Vec3): Vec3 =
   (point - self.origin).norm()

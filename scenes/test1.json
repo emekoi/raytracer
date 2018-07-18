@@ -7,22 +7,10 @@
       "normal": [0.0, 0.0, -1.0]
     }],
     "sphere": [{
-      "origin": [0.0, 0.0, -3.0],
+      "origin": [0.0, 0.0, -1.0],
       "color": [1.0, 0.0, 0.0],
       "albedo": 0.18,
-      "radius": 1.0
-    },
-    {
-      "origin": [1.0, 0.5, -2.0],
-      "color": [0.0, 1.0, 0.0],
-      "albedo": 0.18,
-      "radius": 1.0
-    },
-    {
-      "origin": [-1.0, -0.5, -4.0],
-      "color": [0.0, 0.0, 1.0],
-      "albedo": 0.18,
-      "radius": 1.0
+      "radius": 0.5
     }]
   },
 
@@ -34,9 +22,9 @@
     }]
   },
 
-  "width": 800,
-  "height": 600,
-  "output": "renders/test0.png",
+  "width": 200,
+  "height": 100,
+  "output": "renders/test1.png",
   "parallel": true,
   "shadowBias": 1e-3,
   "fov": 90.0

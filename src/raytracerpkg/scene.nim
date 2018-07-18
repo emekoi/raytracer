@@ -47,11 +47,15 @@ proc add*(self: var Scene, hitable: Hitable) =
 
 proc getColor(self: Scene, ray: Ray): Color =
   for hitable in self.hitables:
-    if hitable.intersect(ray).isSome():
-      return hitable.color
+    let hit = hitable.intersect(ray)
+    if hit.isSome():
+      let t = hit.unsafeGet()
+      if t > 0.0:
+        let n = (ray.pointAt(t) - (0.0, 0.0, -1.0)).norm()
+        return (n + 1.0) * 0.5
   let
     unit_direction = ray.direction.norm()
-    t = 0.5 * (-unit_direction.y + 2.0)
+    t = 0.5 * (unit_direction.y + 1.0)
   result = ((1.0, 1.0, 1.0) * (1.0 - t)) + ((0.5, 0.7, 1.0) * t)
   return result.clamp()
 
