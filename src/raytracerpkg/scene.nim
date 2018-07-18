@@ -6,38 +6,33 @@
 
 {.experimental.}
 
-import streams, math, options, threadpool
+import streams, math, options, random, threadpool
 import stb_image/[write, read], stopwatch, chronicles
-import hitable, ray, vec3, color, util
+import hitable, ray, vec3, color, util, camera
 
 const
   RENDER_PARTITION_SIZE = 2  
   CONVERT_PARTITION_SIZE = RENDER_PARTITION_SIZE * 2
+  HIT_INTERVAL = float.low() .. float.high()
 
 type Scene* = object
   hitables*: seq[Hitable]
   width*, height*: int
   pixels*: seq[Color]
+  camera*: Camera
   output*: string
   parallel*: bool
+  sampleCount*: int
 
-proc newScene*(width, height: int, output: string, parallel: bool=true): Scene =
+proc newScene*(width, height: int, output: string, parallel: bool=true, sampleCount: int=100): Scene =
   result.pixels = newSeq[Color](width * height)
   result.hitables = @[]
   result.width = width
   result.height = height
   result.output = output
   result.parallel = parallel
-  
-proc setPixel*(self: var Scene, x, y: int, color: Color) =
-  if x > self.width or x < 0: return
-  if y > self.height or y < 0: return
-  self.pixels[x + y * self.width] = color
-
-proc getPixel*(self: Scene, x, y: int): Color =
-  if x > self.width or x < 0: return (0.0, 0.0, 0.0)
-  if y > self.height or y < 0: return (0.0, 0.0, 0.0)
-  return self.pixels[x + y * self.width]
+  result.sampleCount = sampleCount
+  result.camera = newCamera()
 
 proc count*(self: Scene): int =
   self.hitables.len
@@ -45,19 +40,23 @@ proc count*(self: Scene): int =
 proc add*(self: var Scene, hitable: Hitable) =
   self.hitables.add hitable
 
-proc getColor(self: Scene, ray: Ray): Color =
+proc trace(self: Scene, ray: Ray, interval: Slice[float]): Option[HitRecord] =
+  result = none(HitRecord)
+  var interval = interval
   for hitable in self.hitables:
-    let hit = hitable.intersect(ray)
+    let hit = hitable.hit(ray, interval)
     if hit.isSome():
-      let t = hit.unsafeGet()
-      if t > 0.0:
-        let n = (ray.pointAt(t) - (0.0, 0.0, -1.0)).norm()
-        return (n + 1.0) * 0.5
+      interval.b = hit.unsafeGet().t
+      result = hit
+
+proc getColor(self: Scene, ray: Ray): Color =
+  let hit = self.trace(ray, HIT_INTERVAL)
+  if hit.isSome():
+    return (hit.unsafeGet().normal + 1) * 0.5
   let
     unit_direction = ray.direction.norm()
     t = 0.5 * (unit_direction.y + 1.0)
-  result = ((1.0, 1.0, 1.0) * (1.0 - t)) + ((0.5, 0.7, 1.0) * t)
-  return result.clamp()
+  (((1.0, 1.0, 1.0) * (1.0 - t)) + ((0.5, 0.7, 1.0) * t)).clamp()
 
 proc renderPartition(self: var Scene, sx, sy: Slice[int]) =
   let
@@ -67,11 +66,12 @@ proc renderPartition(self: var Scene, sx, sy: Slice[int]) =
     origin = (0.0, 0.0, 0.0)
   for y in sy:
     for x in sx:
+      # for s in sampleCount:
       let
         u = float(x) / float(self.width)
         v = float(y) / float(self.height)
         ray = (origin, lower_left_corner + horizontal * u + vertical * v)
-      self.setPixel(x, y, self.getColor(ray))
+      self.pixels[x + y * self.width] = self.getColor(ray)
 
 proc renderParallel*(self: var Scene) =
   # send a ray though each pixel in parallel

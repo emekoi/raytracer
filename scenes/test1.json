@@ -1,31 +1,21 @@
 {
   "objects": {
-    "plane":[{
-      "origin": [0.0, -10.0, 1.0],
-      "color": [0.678, 0.847, 0.901],
-      "albedo": 0.18,
-      "normal": [0.0, 0.0, -1.0]
-    }],
     "sphere": [{
       "origin": [0.0, 0.0, -1.0],
       "color": [1.0, 0.0, 0.0],
-      "albedo": 0.18,
       "radius": 0.5
+    },
+    {
+      "origin": [0.0, -100.5, -1.0],
+      "color": [1.0, 0.0, 0.0],
+      "radius": 100.0
     }]
   },
-
-  "lights": {
-    "directional": [{
-      "direction": [0.0, 0.0, -1.0],
-      "color": [1.0, 1.0, 1.0],
-      "intensity": 10.0
-    }]
-  },
-
   "width": 200,
   "height": 100,
   "output": "renders/test1.png",
   "parallel": true,
+  "sampleCount": 100,
   "shadowBias": 1e-3,
   "fov": 90.0
 }

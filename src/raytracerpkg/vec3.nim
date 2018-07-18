@@ -84,3 +84,5 @@ proc norm*(self: Vec3): Vec3 =
 
 proc zero*(): Vec3 =
   (0.0, 0.0, 0.0)
+
+{.pop.}

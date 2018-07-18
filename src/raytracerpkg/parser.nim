@@ -8,6 +8,7 @@ import tables, json, streams
 include prelude
 
 proc setParallel(self: var Scene, node: JsonNode)
+proc setSampleCount(self: var Scene, node: JsonNode)
 proc getObjects(self: var Scene, node: JsonNode)
 proc getSphere(self: var Scene, node: JsonNode)
 
@@ -18,6 +19,9 @@ proc getVec3(node: JsonNode): Vec3 =
 
 proc setParallel(self: var Scene, node: JsonNode) =
   self.parallel = node.getBool()
+
+proc setSampleCount(self: var Scene, node: JsonNode) =
+  self.sampleCount = node.getInt()
 
 proc getObjects(self: var Scene, node: JsonNode) =
   for kind, obj in node:
@@ -37,6 +41,7 @@ proc getSphere(self: var Scene, node: JsonNode) =
 
 const PARSER = {
   "parallel": setParallel,
+  "sampleCount": setSampleCount,
   "objects": getObjects,
 }.toTable()
 

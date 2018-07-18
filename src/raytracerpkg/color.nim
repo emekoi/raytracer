@@ -23,10 +23,18 @@ template `b`*(cself: Color): float = self.z
 template `b=`*(self: var Color, v: float) =
   self.z = v
 
-proc clamp*(self: Color): Color =
-  result.x = self.x.clamp(0.0, 1.0)
-  result.y = self.y.clamp(0.0, 1.0)
-  result.z = self.z.clamp(0.0, 1.0)
+proc clamp[T](x: T, interval: Slice[T]): T =
+  x.clamp interval.a, interval.b
+
+proc clamp*(self: Color, interval: Slice[float]=0.0 .. 1.0): Color =
+  result.x = self.x.clamp interval
+  result.y = self.y.clamp interval
+  result.z = self.z.clamp interval
+
+proc clamp*(self: var Color, interval: Slice[float]=0.0 .. 1.0)=
+  self.x = self.x.clamp interval
+  self.y = self.y.clamp interval
+  self.z = self.z.clamp interval
 
 const
   WHITE* = (1.0, 1.0, 1.0).Color
